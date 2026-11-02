@@ -4,21 +4,11 @@
 #include <CL/cl.h>
 
 #include <cstddef>
+#include <vector>
 
 namespace {
 
-const char* kGeluKernel = R"CLC(
-__kernel void gelu_f4(__global const float4* in, __global float4* out, int n4) {
-    const int i = get_global_id(0);
-    if (i >= n4) {
-        return;
-    }
-    const float4 x = in[i];
-    const float4 x2 = x * x;
-    const float4 s = 0.7978845608028654f * (x + 0.044715f * x2 * x);
-    out[i] = x / (1.0f + native_exp(-2.0f * s));
-}
-
+const char* kGeluSource = R"CLC(
 __kernel void gelu(__global const float* in, __global float* out, int n) {
     const int i = get_global_id(0);
     if (i >= n) {
@@ -27,11 +17,22 @@ __kernel void gelu(__global const float* in, __global float* out, int n) {
     const float x = in[i];
     const float x2 = x * x;
     const float s = 0.7978845608028654f * (x + 0.044715f * x2 * x);
-    out[i] = x / (1.0f + native_exp(-2.0f * s));
+    out[i] = x / (1.0f + exp(-2.0f * s));
+}
+
+__kernel void gelu4(__global const float4* in, __global float4* out, int n4) {
+    const int i = get_global_id(0);
+    if (i >= n4) {
+        return;
+    }
+    const float4 x = in[i];
+    const float4 x2 = x * x;
+    const float4 s = 0.7978845608028654f * (x + 0.044715f * x2 * x);
+    out[i] = x / (1.0f + exp(-2.0f * s));
 }
 )CLC";
 
-struct OclCache {
+struct Runtime {
     int platform = -1;
     cl_context ctx = nullptr;
     cl_command_queue queue = nullptr;
@@ -43,163 +44,196 @@ struct OclCache {
     std::size_t cap = 0;
 };
 
-OclCache& Cache() {
-    static OclCache cache;
-    return cache;
+Runtime& GetRuntime() {
+    static Runtime rt;
+    return rt;
 }
 
-void ReleaseBuffers(OclCache& cache) {
-    if (cache.d_in != nullptr) {
-        clReleaseMemObject(cache.d_in);
-        cache.d_in = nullptr;
+void ReleaseBuffers(Runtime& rt) {
+    if (rt.d_in != nullptr) {
+        clReleaseMemObject(rt.d_in);
+        rt.d_in = nullptr;
     }
-    if (cache.d_out != nullptr) {
-        clReleaseMemObject(cache.d_out);
-        cache.d_out = nullptr;
+    if (rt.d_out != nullptr) {
+        clReleaseMemObject(rt.d_out);
+        rt.d_out = nullptr;
     }
-    cache.cap = 0;
+    rt.cap = 0;
 }
 
-void ReleaseAll(OclCache& cache) {
-    ReleaseBuffers(cache);
-    if (cache.kernel != nullptr) {
-        clReleaseKernel(cache.kernel);
-        cache.kernel = nullptr;
+void ReleaseAll(Runtime& rt) {
+    ReleaseBuffers(rt);
+    if (rt.kernel != nullptr) {
+        clReleaseKernel(rt.kernel);
+        rt.kernel = nullptr;
     }
-    if (cache.kernel4 != nullptr) {
-        clReleaseKernel(cache.kernel4);
-        cache.kernel4 = nullptr;
+    if (rt.kernel4 != nullptr) {
+        clReleaseKernel(rt.kernel4);
+        rt.kernel4 = nullptr;
     }
-    if (cache.program != nullptr) {
-        clReleaseProgram(cache.program);
-        cache.program = nullptr;
+    if (rt.program != nullptr) {
+        clReleaseProgram(rt.program);
+        rt.program = nullptr;
     }
-    if (cache.queue != nullptr) {
-        clReleaseCommandQueue(cache.queue);
-        cache.queue = nullptr;
+    if (rt.queue != nullptr) {
+        clReleaseCommandQueue(rt.queue);
+        rt.queue = nullptr;
     }
-    if (cache.ctx != nullptr) {
-        clReleaseContext(cache.ctx);
-        cache.ctx = nullptr;
+    if (rt.ctx != nullptr) {
+        clReleaseContext(rt.ctx);
+        rt.ctx = nullptr;
     }
-    cache.platform = -1;
+    rt.platform = -1;
 }
 
-bool EnsureContext(int platform_index) {
-    OclCache& cache = Cache();
-    if (cache.platform == platform_index && cache.ctx != nullptr) {
+bool Init(int platform_index) {
+    Runtime& rt = GetRuntime();
+    if (rt.platform == platform_index && rt.ctx != nullptr && rt.queue != nullptr &&
+        rt.kernel != nullptr && rt.kernel4 != nullptr) {
         return true;
     }
-    ReleaseAll(cache);
+    ReleaseAll(rt);
 
-    cl_uint num_platforms = 0;
-    if (clGetPlatformIDs(0, nullptr, &num_platforms) != CL_SUCCESS || num_platforms == 0) {
+    cl_uint nplatforms = 0;
+    if (clGetPlatformIDs(0, nullptr, &nplatforms) != CL_SUCCESS || nplatforms == 0) {
         return false;
     }
-    if (platform_index < 0 || static_cast<cl_uint>(platform_index) >= num_platforms) {
+    if (platform_index < 0 || static_cast<cl_uint>(platform_index) >= nplatforms) {
         return false;
     }
 
-    cl_platform_id platforms[16];
-    const cl_uint to_query = num_platforms < 16u ? num_platforms : 16u;
-    clGetPlatformIDs(to_query, platforms, nullptr);
-    if (static_cast<cl_uint>(platform_index) >= to_query) {
+    std::vector<cl_platform_id> platforms(nplatforms);
+    if (clGetPlatformIDs(nplatforms, platforms.data(), nullptr) != CL_SUCCESS) {
         return false;
     }
+    const cl_platform_id plat = platforms[static_cast<std::size_t>(platform_index)];
 
     cl_device_id device = nullptr;
-    if (clGetDeviceIDs(platforms[platform_index], CL_DEVICE_TYPE_GPU, 1, &device, nullptr) !=
-        CL_SUCCESS) {
+    cl_uint ndev = 0;
+    cl_int derr = clGetDeviceIDs(plat, CL_DEVICE_TYPE_GPU, 0, nullptr, &ndev);
+    if (derr == CL_SUCCESS && ndev > 0) {
+        std::vector<cl_device_id> devices(ndev);
+        if (clGetDeviceIDs(plat, CL_DEVICE_TYPE_GPU, ndev, devices.data(), nullptr) != CL_SUCCESS) {
+            return false;
+        }
+        device = devices[0];
+    } else if (clGetDeviceIDs(plat, CL_DEVICE_TYPE_GPU, 1, &device, &ndev) != CL_SUCCESS ||
+               device == nullptr) {
         return false;
     }
 
     cl_int err = CL_SUCCESS;
-    cache.ctx = clCreateContext(nullptr, 1, &device, nullptr, nullptr, &err);
-    if (err != CL_SUCCESS) {
+    cl_context_properties props[] = {
+        CL_CONTEXT_PLATFORM, reinterpret_cast<cl_context_properties>(plat), 0};
+    rt.ctx = clCreateContext(props, 1, &device, nullptr, nullptr, &err);
+    if (err != CL_SUCCESS || rt.ctx == nullptr) {
+        ReleaseAll(rt);
         return false;
     }
-    cache.queue = clCreateCommandQueue(cache.ctx, device, 0, &err);
-    if (err != CL_SUCCESS) {
+    rt.queue = clCreateCommandQueue(rt.ctx, device, 0, &err);
+    if (err != CL_SUCCESS || rt.queue == nullptr) {
+        ReleaseAll(rt);
         return false;
     }
-    cache.program = clCreateProgramWithSource(cache.ctx, 1, &kGeluKernel, nullptr, &err);
-    if (err != CL_SUCCESS) {
+    rt.program = clCreateProgramWithSource(rt.ctx, 1, &kGeluSource, nullptr, &err);
+    if (err != CL_SUCCESS || rt.program == nullptr) {
+        ReleaseAll(rt);
         return false;
     }
-    if (clBuildProgram(cache.program, 1, &device, "-cl-fast-relaxed-math", nullptr, nullptr) !=
-        CL_SUCCESS) {
+    if (clBuildProgram(rt.program, 1, &device, nullptr, nullptr, nullptr) != CL_SUCCESS) {
+        ReleaseAll(rt);
         return false;
     }
-    cache.kernel = clCreateKernel(cache.program, "gelu", &err);
-    if (err != CL_SUCCESS) {
+    rt.kernel = clCreateKernel(rt.program, "gelu", &err);
+    if (err != CL_SUCCESS || rt.kernel == nullptr) {
+        ReleaseAll(rt);
         return false;
     }
-    cache.kernel4 = clCreateKernel(cache.program, "gelu_f4", &err);
-    if (err != CL_SUCCESS) {
+    rt.kernel4 = clCreateKernel(rt.program, "gelu4", &err);
+    if (err != CL_SUCCESS || rt.kernel4 == nullptr) {
+        ReleaseAll(rt);
         return false;
     }
-    cache.platform = platform_index;
+    rt.platform = platform_index;
     return true;
 }
 
 bool EnsureBuffers(std::size_t n) {
-    OclCache& cache = Cache();
-    if (cache.cap >= n) {
+    Runtime& rt = GetRuntime();
+    if (rt.cap >= n && rt.d_in != nullptr && rt.d_out != nullptr) {
         return true;
     }
-    ReleaseBuffers(cache);
+    ReleaseBuffers(rt);
     cl_int err = CL_SUCCESS;
     const std::size_t bytes = n * sizeof(float);
-    cache.d_in = clCreateBuffer(cache.ctx, CL_MEM_READ_ONLY, bytes, nullptr, &err);
-    if (err != CL_SUCCESS) {
+    rt.d_in = clCreateBuffer(rt.ctx, CL_MEM_READ_ONLY, bytes, nullptr, &err);
+    if (err != CL_SUCCESS || rt.d_in == nullptr) {
+        ReleaseBuffers(rt);
         return false;
     }
-    cache.d_out = clCreateBuffer(cache.ctx, CL_MEM_WRITE_ONLY, bytes, nullptr, &err);
-    if (err != CL_SUCCESS) {
+    rt.d_out = clCreateBuffer(rt.ctx, CL_MEM_WRITE_ONLY, bytes, nullptr, &err);
+    if (err != CL_SUCCESS || rt.d_out == nullptr) {
+        ReleaseBuffers(rt);
         return false;
     }
-    cache.cap = n;
+    rt.cap = n;
     return true;
 }
 
 }
 
 std::vector<float> GeluOCL(const std::vector<float>& input, int platform) {
-    const int n = static_cast<int>(input.size());
+    const std::size_t n = input.size();
     if (n == 0) {
         return {};
     }
-    if (!EnsureContext(platform) || !EnsureBuffers(static_cast<std::size_t>(n))) {
-        return std::vector<float>(static_cast<std::size_t>(n), 0.0f);
+    if (!Init(platform) || !EnsureBuffers(n)) {
+        return {};
     }
 
-    OclCache& cache = Cache();
-    const std::size_t bytes = static_cast<std::size_t>(n) * sizeof(float);
-    clEnqueueWriteBuffer(cache.queue, cache.d_in, CL_FALSE, 0, bytes, input.data(), 0, nullptr,
-                         nullptr);
+    Runtime& rt = GetRuntime();
+    const std::size_t bytes = n * sizeof(float);
+    if (clEnqueueWriteBuffer(rt.queue, rt.d_in, CL_FALSE, 0, bytes, input.data(), 0, nullptr,
+                             nullptr) != CL_SUCCESS) {
+        return {};
+    }
 
-    std::vector<float> output(static_cast<std::size_t>(n));
+    std::vector<float> output(n);
 
     constexpr std::size_t kLocal = 256;
-    if ((n & 3) == 0) {
-        const int n4 = n >> 2;
-        clSetKernelArg(cache.kernel4, 0, sizeof(cl_mem), &cache.d_in);
-        clSetKernelArg(cache.kernel4, 1, sizeof(cl_mem), &cache.d_out);
-        clSetKernelArg(cache.kernel4, 2, sizeof(int), &n4);
+    cl_int err = CL_SUCCESS;
+    if ((n & 3u) == 0) {
+        const int n4 = static_cast<int>(n >> 2);
+        err = clSetKernelArg(rt.kernel4, 0, sizeof(cl_mem), &rt.d_in);
+        err |= clSetKernelArg(rt.kernel4, 1, sizeof(cl_mem), &rt.d_out);
+        err |= clSetKernelArg(rt.kernel4, 2, sizeof(int), &n4);
+        if (err != CL_SUCCESS) {
+            return {};
+        }
         const std::size_t global =
             (static_cast<std::size_t>(n4) + kLocal - 1) / kLocal * kLocal;
-        clEnqueueNDRangeKernel(cache.queue, cache.kernel4, 1, nullptr, &global, &kLocal, 0, nullptr,
-                               nullptr);
+        if (clEnqueueNDRangeKernel(rt.queue, rt.kernel4, 1, nullptr, &global, &kLocal, 0, nullptr,
+                                   nullptr) != CL_SUCCESS) {
+            return {};
+        }
     } else {
-        clSetKernelArg(cache.kernel, 0, sizeof(cl_mem), &cache.d_in);
-        clSetKernelArg(cache.kernel, 1, sizeof(cl_mem), &cache.d_out);
-        clSetKernelArg(cache.kernel, 2, sizeof(int), &n);
-        const std::size_t global = (static_cast<std::size_t>(n) + kLocal - 1) / kLocal * kLocal;
-        clEnqueueNDRangeKernel(cache.queue, cache.kernel, 1, nullptr, &global, &kLocal, 0, nullptr,
-                               nullptr);
+        const int nn = static_cast<int>(n);
+        err = clSetKernelArg(rt.kernel, 0, sizeof(cl_mem), &rt.d_in);
+        err |= clSetKernelArg(rt.kernel, 1, sizeof(cl_mem), &rt.d_out);
+        err |= clSetKernelArg(rt.kernel, 2, sizeof(int), &nn);
+        if (err != CL_SUCCESS) {
+            return {};
+        }
+        const std::size_t global = (n + kLocal - 1) / kLocal * kLocal;
+        if (clEnqueueNDRangeKernel(rt.queue, rt.kernel, 1, nullptr, &global, &kLocal, 0, nullptr,
+                                   nullptr) != CL_SUCCESS) {
+            return {};
+        }
     }
 
-    clEnqueueReadBuffer(cache.queue, cache.d_out, CL_TRUE, 0, bytes, output.data(), 0, nullptr,
-                        nullptr);
+    if (clEnqueueReadBuffer(rt.queue, rt.d_out, CL_TRUE, 0, bytes, output.data(), 0, nullptr,
+                            nullptr) != CL_SUCCESS) {
+        return {};
+    }
     return output;
 }
