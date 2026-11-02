@@ -24,13 +24,11 @@ __global__ void softmax_kernel(const float* __restrict__ x,
     int tid = threadIdx.x;
     int row = blockIdx.x;
     int b_rows = row * row_size;
-    int el_per_thread = row_size / BLOCK_SIZE;
 
-    float vals[16];
     float lmax = -FLT_MAX;
-    for (int k = 0; k < el_per_thread; ++k) {
-        vals[k] = x[b_rows + tid + k * BLOCK_SIZE];
-        if (vals[k] > lmax) lmax = vals[k];
+    for (int k = tid; k < row_size; k+=BLOCK_SIZE) {
+        float tmp = x[b_rows + k];
+        if (tmp > lmax) lmax = tmp;
     }
 
     red[tid] = lmax;
@@ -45,9 +43,8 @@ __global__ void softmax_kernel(const float* __restrict__ x,
     __syncthreads();
 
     float lsum = 0.0f;
-    for (int k = 0; k < el_per_thread; ++k) {
-        vals[k] = __expf(vals[k] - rowmax);
-        lsum += vals[k];
+    for (int k = tid; k < row_size; k+=BLOCK_SIZE) {
+        lsum += expf(x[b_rows + k] - rowmax);
     }
 
     red[tid] = lsum;
@@ -60,8 +57,8 @@ __global__ void softmax_kernel(const float* __restrict__ x,
     }
     float rowsum = red[0];
 
-    for (int k = 0; k < el_per_thread; ++k) {
-        y[b_rows + tid + k * BLOCK_SIZE] = vals[k] / rowsum;
+    for (int k = tid; k < row_size; k+=BLOCK_SIZE) {
+        y[b_rows + k] = expf(x[b_rows + k] - rowmax) / rowsum;
     }
 }
 
