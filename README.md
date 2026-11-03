@@ -737,9 +737,9 @@ std::vector<float> GeluOCL(const std::vector<float>& input, int platform) {
 |3823B1PE1|kondrashova_victoria|0.2731|8|
 |3823B1PE2|zorin_danila_artemovich|0.2745|2|
 |3823B1PE4|tsarkov_klim|0.2753|4|
+|3823B1PE1|tsibareva_ekaterina|0.2809|12|
 |3823B1PE1|golovanov_daniil|0.2818|5|
 |3823B1PE3|afanasyev_alexandr|0.2893|6|
-|3823B1PE1|tsibareva_ekaterina|TEST FAILED|-|
 
 ## 7_layernorm_pycuda (8192x16384 elements)
 |Group|Name|Result|Rank|
@@ -846,7 +846,7 @@ Passed: 1
 |Group|Name|Passed|Score|
 |-----|----|------|-----|
 |3823B1PE1|chernov_timur|7/8|298|
-|3823B1PE1|golovanov_daniil|**8/8**|**397**|
+|3823B1PE1|golovanov_daniil|**8/8**|**396**|
 |3823B1PE1|ivanova_polina|**8/8**|**404**|
 |3823B1PE1|kondrashova_victoria|**8/8**|**384**|
 |3823B1PE1|lazareva_ann|**8/8**|**373**|
@@ -860,7 +860,7 @@ Passed: 1
 |3823B1PE1|rusakova_aleksandra|**8/8**|**466**|
 |3823B1PE1|shilin_nikita|7/8|400|
 |3823B1PE1|tabalaev_anton|6/8|296|
-|3823B1PE1|tsibareva_ekaterina|5/8|245|
+|3823B1PE1|tsibareva_ekaterina|6/8|288|
 |3823B1PE1|zhurin_ivan|4/8|189|
 |3823B1PE1|zyazeva_svetlana|1/8|34|
 
