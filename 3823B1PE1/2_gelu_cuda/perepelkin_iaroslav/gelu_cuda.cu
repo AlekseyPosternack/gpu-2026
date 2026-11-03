@@ -3,11 +3,21 @@
 
 #include "gelu_cuda.h"
 
-__global__ void geluKernel(const float* input, float* output, size_t size) {
+namespace {
+// GELU(x) = x / (1 + exp(-x * (kA + kB * x^2)))
+constexpr float kLog2e = 1.44269504089f;
+constexpr float kA = 1.59576912f * kLog2e;
+constexpr float kB = 0.0713548f * kLog2e;
+
+constexpr int kBlockSize = 256;
+}
+
+__global__ void geluKernel(const float* __restrict__ input, float* __restrict__ output, size_t size) {
     size_t idx = blockIdx.x * blockDim.x + threadIdx.x;
     if (idx < size) {
         float x = input[idx];
-        output[idx] = x / (1.0f + expf(-1.702f * x));
+        float t = x * (kA + kB * x * x);
+        output[idx] = x / (1.0f + exp2f(-t));
     }
 }
 
@@ -32,10 +42,9 @@ std::vector<float> GeluCUDA(const std::vector<float>& input) {
 
     cudaMemcpyAsync(d_in, input.data(), size * sizeof(float), cudaMemcpyHostToDevice);
 
-    int blockSize = 256;
-    int numBlocks = (size + blockSize - 1) / blockSize;
+    int numBlocks = (size + kBlockSize - 1) / kBlockSize;
 
-    geluKernel<<<numBlocks, blockSize>>>(d_in, d_out, size);
+    geluKernel<<<numBlocks, kBlockSize>>>(d_in, d_out, size);
 
     std::vector<float> result(size);
 

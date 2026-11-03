@@ -1,0 +1,10 @@
+/home/crazyproger/sandbox/gpu-2026/3823B1PE1/8_gelu_ocl/chernov_timur/gelu_ocl.cpp: In member function ‘void OCLState::init_opencl(int)’:
+/home/crazyproger/sandbox/gpu-2026/3823B1PE1/8_gelu_ocl/chernov_timur/gelu_ocl.cpp:101:65: error: invalid conversion from ‘const char* const*’ to ‘const char**’ [-fpermissive]
+  101 |         cl_program prog = clCreateProgramWithSource(context, 1, &kernel_source, nullptr, nullptr);
+      |                                                                 ^~~~~~~~~~~~~~
+      |                                                                 |
+      |                                                                 const char* const*
+In file included from /home/crazyproger/sandbox/gpu-2026/3823B1PE1/8_gelu_ocl/chernov_timur/gelu_ocl.cpp:4:
+/usr/include/CL/cl.h:1235:45: note:   initializing argument 3 of ‘_cl_program* clCreateProgramWithSource(cl_context, cl_uint, const char**, const size_t*, cl_int*)’
+ 1235 |                           const char **     strings,
+      |                           ~~~~~~~~~~~~~~~~~~^~~~~~~
