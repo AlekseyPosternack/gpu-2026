@@ -2,6 +2,14 @@
 
 #include "gelu_omp.h"
 
+
+namespace {
+// GELU(x) = x / (1 + exp(-x * (kA + kB * x^2)))
+constexpr float kLog2e = 1.44269504089f;
+constexpr float kA = 1.59576912f * kLog2e;
+constexpr float kB = 0.0713548f * kLog2e;
+}
+
 std::vector<float> GeluOMP(const std::vector<float>& input) {
     if (input.empty()) {
         return {};
@@ -10,15 +18,14 @@ std::vector<float> GeluOMP(const std::vector<float>& input) {
     const size_t size = input.size();
     std::vector<float> result(size);
 
-    // GELU approximation:
-    // GELU(x) = x * sigmoid(1.702 * x) = x / (1 + exp(-1.702 * x))
-    const float* in_ptr = input.data();
-    float* out_ptr = result.data();
+    const float* __restrict__ in_ptr = input.data();
+    float* __restrict__ out_ptr = result.data();
 
-    #pragma omp parallel for simd schedule(static) default(none) shared(size, in_ptr, out_ptr)
+    #pragma omp parallel for simd aligned(in_ptr, out_ptr: 16) schedule(static) default(none) shared(size, in_ptr, out_ptr)
     for (size_t i = 0; i < size; ++i) {
         float x = in_ptr[i];
-        out_ptr[i] = x / (1.0f + std::exp(-1.702f * x));
+        float t = x * (kA + kB * x * x);
+        out_ptr[i] = x / (1.0f + std::exp2f(-t));
     }
 
     return result;
