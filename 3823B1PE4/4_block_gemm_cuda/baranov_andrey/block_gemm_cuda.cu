@@ -28,7 +28,6 @@ __global__ void block_gemm_kernel(const float* __restrict__ a,
         for (int k = 0; k < BLOCK_SIZE; ++k) {
             sum += As[ty][k] * Bs[k][tx];
         }
-
         __syncthreads();
     }
 
@@ -40,7 +39,6 @@ std::vector<float> BlockGemmCUDA(const std::vector<float>& a,
                                  int n) {
     std::vector<float> c(n * n, 0.0f);
     if (n == 0) return c;
-
     const size_t bytes = n * n * sizeof(float);
     float *d_a = nullptr, *d_b = nullptr, *d_c = nullptr;
     cudaMalloc(&d_a, bytes);
@@ -52,9 +50,9 @@ std::vector<float> BlockGemmCUDA(const std::vector<float>& a,
 
     dim3 threadsPerBlock(BLOCK_SIZE, BLOCK_SIZE);
     dim3 blocksPerGrid(n / BLOCK_SIZE, n / BLOCK_SIZE);
-
     block_gemm_kernel<<<blocksPerGrid, threadsPerBlock>>>(d_a, d_b, d_c, n);
     cudaMemcpy(c.data(), d_c, bytes, cudaMemcpyDeviceToHost);
+
     cudaFree(d_a);
     cudaFree(d_b);
     cudaFree(d_c);
