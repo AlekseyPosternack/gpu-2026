@@ -806,6 +806,7 @@ std::vector<float> GeluOCL(const std::vector<float>& input, int platform) {
 |**REF**|**REF**|**0.1740**|**-**|
 |3823B1PE4|tsarkov_klim|0.1750|2|
 |3823B1PE2|olesnitskiy_vladimir|0.1760|9|
+|3823B1PE1|tsibareva_ekaterina|0.1810|11|
 |3823B1PE4|urin_oleg|0.1840|7|
 |3823B1PE2|sinev_artem|0.1980|4|
 |3823B1PE1|lazareva_ann|0.2180|9|
@@ -889,8 +890,8 @@ Passed: 1
 |3823B1PE1|chernov_timur|**8/8**|**342**|
 |3823B1PE1|golovanov_daniil|**8/8**|**388**|
 |3823B1PE1|ivanova_polina|**8/8**|**403**|
-|3823B1PE1|kondrashova_victoria|**8/8**|**377**|
-|3823B1PE1|lazareva_ann|**8/8**|**369**|
+|3823B1PE1|kondrashova_victoria|**8/8**|**376**|
+|3823B1PE1|lazareva_ann|**8/8**|**368**|
 |3823B1PE1|makoveeva_sofia|1/8|51|
 |3823B1PE1|melnik_ivan|5/8|249|
 |3823B1PE1|morozov_nikita|1/8|49|
@@ -901,7 +902,7 @@ Passed: 1
 |3823B1PE1|rusakova_aleksandra|**8/8**|**463**|
 |3823B1PE1|shilin_nikita|**8/8**|**446**|
 |3823B1PE1|tabalaev_anton|6/8|296|
-|3823B1PE1|tsibareva_ekaterina|6/8|282|
+|3823B1PE1|tsibareva_ekaterina|7/8|328|
 |3823B1PE1|zhurin_ivan|6/8|274|
 |3823B1PE1|zyazeva_svetlana|1/8|34|
 
