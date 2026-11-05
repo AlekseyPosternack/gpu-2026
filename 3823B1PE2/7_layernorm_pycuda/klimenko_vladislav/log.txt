@@ -1,8 +1,0 @@
-Traceback (most recent call last):
-  File "/home/crazyproger/sandbox/./main.py", line 8, in <module>
-    from layernorm_pycuda import layernorm_pycuda
-  File "/home/crazyproger/sandbox/layernorm_pycuda.py", line 148, in <module>
-    _layernorm_kernel = _module.get_function("layernorm_kernel")
-  File "/home/crazyproger/.local/lib/python3.10/site-packages/pycuda/compiler.py", line 323, in get_function
-    return self.module.get_function(name)
-pycuda._driver.LogicError: cuModuleGetFunction failed: named symbol not found
