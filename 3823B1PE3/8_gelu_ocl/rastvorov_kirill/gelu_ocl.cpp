@@ -12,25 +12,37 @@
 
 namespace {
 
-const char* kKernelSource = R"CLC(
 //------------------------------------------------------------------
 //function: gelu
-//purpose: считает GELU через exp вместо tanh, каждый поток обрабатывает 4 соседних элемента
+//purpose: считает GELU через exp вместо tanh без переполнения, каждый поток обрабатывает 4 соседних элемента
 //------------------------------------------------------------------
+const char* kKernelSource = R"CLC(
 __kernel void gelu(__global const float* in, __global float* out,
                    const uint size) {
-    const float k0 = -2.0f * 0.7978845608028654f;
+    const float k0 = 2.0f * 0.7978845608028654f;
     const float k1 = k0 * 0.044715f;
     const uint i = get_global_id(0);
     const uint base = i * 4;
-    if (base + 3 < size) {
-        const float4 x = vload4(i, in);
-        vstore4(x / (1.0f + native_exp(x * (k0 + k1 * x * x))), i, out);
+    if (base >= size) return;
+    const bool full = base + 3 < size;
+    float4 x = (float4)(0.0f);
+    if (full) {
+        x = vload4(i, in);
     } else {
-        for (uint j = base; j < size; ++j) {
-            const float x = in[j];
-            out[j] = x / (1.0f + native_exp(x * (k0 + k1 * x * x)));
-        }
+        x.x = in[base];
+        if (base + 1 < size) x.y = in[base + 1];
+        if (base + 2 < size) x.z = in[base + 2];
+    }
+    const float4 a = x * (k0 + k1 * x * x);
+    const float4 d = exp(-fabs(a));
+    const float4 r = 1.0f / (1.0f + d);
+    const float4 y = x * select(d * r, r, a >= 0.0f);
+    if (full) {
+        vstore4(y, i, out);
+    } else {
+        out[base] = y.x;
+        if (base + 1 < size) out[base + 1] = y.y;
+        if (base + 2 < size) out[base + 2] = y.z;
     }
 }
 )CLC";
@@ -91,7 +103,7 @@ bool Init(int platform) {
     g_state.queue = clCreateCommandQueue(g_state.context, device, 0, &err);
     g_state.program = clCreateProgramWithSource(g_state.context, 1,
                                                 &kKernelSource, nullptr, &err);
-    err = clBuildProgram(g_state.program, 1, &device, "-cl-fast-relaxed-math",
+    err = clBuildProgram(g_state.program, 1, &device, "",
                          nullptr, nullptr);
     if (err != CL_SUCCESS) {
         size_t log_size = 0;
