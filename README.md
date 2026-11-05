@@ -451,6 +451,7 @@ std::vector<float> GeluOCL(const std::vector<float>& input, int platform) {
 |3823B1PE1|tsibareva_ekaterina|0.2378|4|
 |3823B1PE3|dergachev_arseniy|0.2386|1|
 |3823B1PE2|kolotukhin_alexander|0.2394|3|
+|3823B1PE4|sinev_timur|0.2395|13|
 |3823B1PE1|lazareva_ann|0.2397|15|
 |3823B1PE4|muhammadkhon_isram|0.2403|12|
 |3823B1FI1|zenin_anton|0.2408|1|
@@ -942,19 +943,20 @@ Passed: 5
 ## 3823B1PE4
 |Group|Name|Passed|Score|
 |-----|----|------|-----|
-|3823B1PE4|baranov_andrey|6/8|293|
+|3823B1PE4|baranov_andrey|6/8|292|
 |3823B1PE4|dilshodov_adkham|**8/8**|**497**|
 |3823B1PE4|karpich_ivan|**8/8**|**442**|
-|3823B1PE4|muhammadkhon_isram|6/8|288|
-|3823B1PE4|peryashkin_vasily|**8/8**|**463**|
+|3823B1PE4|muhammadkhon_isram|6/8|287|
+|3823B1PE4|peryashkin_vasily|**8/8**|**462**|
 |3823B1PE4|remizov_kirill|6/8|355|
-|3823B1PE4|romanov_michail|**8/8**|**428**|
-|3823B1PE4|safronov_maksim|4/8|191|
+|3823B1PE4|romanov_michail|**8/8**|**427**|
+|3823B1PE4|safronov_maksim|4/8|190|
+|3823B1PE4|sinev_timur|1/8|48|
 |3823B1PE4|terekhov_dmitriy|**8/8**|**414**|
-|3823B1PE4|trofimov_nikita|4/8|186|
-|3823B1PE4|tsarkov_klim|**8/8**|**421**|
+|3823B1PE4|trofimov_nikita|4/8|185|
+|3823B1PE4|tsarkov_klim|**8/8**|**420**|
 |3823B1PE4|urin_oleg|5/8|259|
-|3823B1PE4|zaharov_gleb|6/8|335|
+|3823B1PE4|zaharov_gleb|6/8|334|
 
 Passed: 6
 
