@@ -9,6 +9,7 @@
 namespace {
 
 // 0.5 * x * (1 + tanh(z)) == x / (1 + exp(-2z)), z = sqrt(2/pi) * (x + 0.044715 * x^3)
+// Plain exp and division keep IEEE semantics: for x < -10.5 exp overflows to inf and x / inf == -0
 const char* kKernelSource = R"CLC(
 __kernel void gelu(__global const float4* in, __global float4* out,
                    __global const float* in_scalar, __global float* out_scalar,
@@ -18,12 +19,12 @@ __kernel void gelu(__global const float4* in, __global float4* out,
     const uint i = get_global_id(0);
     if (i < vec_count) {
         const float4 x = in[i];
-        out[i] = native_divide(x, 1.0f + native_exp(x * (k1 + k2 * x * x)));
+        out[i] = x / (1.0f + exp(x * (k1 + k2 * x * x)));
     }
     if (i < tail_count) {
         const uint j = vec_count * 4 + i;
         const float x = in_scalar[j];
-        out_scalar[j] = native_divide(x, 1.0f + native_exp(x * (k1 + k2 * x * x)));
+        out_scalar[j] = x / (1.0f + exp(x * (k1 + k2 * x * x)));
     }
 }
 )CLC";
@@ -88,7 +89,7 @@ struct OclContext {
         context = clCreateContext(nullptr, 1, &device, nullptr, nullptr, &err);
         queue = clCreateCommandQueue(context, device, 0, &err);
         program = clCreateProgramWithSource(context, 1, &kKernelSource, nullptr, &err);
-        err = clBuildProgram(program, 1, &device, "-cl-fast-relaxed-math", nullptr, nullptr);
+        err = clBuildProgram(program, 1, &device, nullptr, nullptr, nullptr);
         if (err != CL_SUCCESS) {
             Release();
             return false;
