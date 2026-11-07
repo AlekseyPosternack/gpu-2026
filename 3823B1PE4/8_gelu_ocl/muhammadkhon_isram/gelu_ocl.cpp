@@ -1,185 +1,336 @@
+
 #include "gelu_ocl.h"
 
 #define CL_TARGET_OPENCL_VERSION 120
 #include <CL/cl.h>
 
-#include <algorithm>
 #include <cstddef>
+#include <future>
+#include <memory>
+#include <stdexcept>
+#include <string>
+#include <vector>
 
 namespace {
 
 const char* kKernelSource = R"CLC(
-#define GELU_A (2.0f * 0.7978845608028654f)
-#define GELU_B (GELU_A * 0.044715f)
+__kernel void Gelu(__global float* data, ulong count) {
 
-// i — абсолютный индекс float4 (учитывает global_work_offset), end4 — конец чанка
-__kernel void Gelu(__global const float4* in, __global float4* out, uint end4) {
-    const uint i = get_global_id(0);
-    if (i < end4) {
-        const float4 x = in[i];
-        const float4 u = x * (GELU_A + GELU_B * x * x);
-        const float4 e = exp(-fabs(u));
-        const float4 numerator = select(e, (float4)(1.0f), isgreaterequal(u, (float4)(0.0f)));
-        out[i] = x * numerator / (1.0f + e);
-    }
-}
+    const size_t i = get_global_id(0) * 4;
 
-__kernel void GeluTail(__global const float* in, __global float* out, uint offset, uint n) {
-    const uint i = offset + get_global_id(0);
-    if (i < n) {
-        const float x = in[i];
-        const float u = x * (GELU_A + GELU_B * x * x);
-        const float e = exp(-fabs(u));
-        out[i] = x * (u >= 0.0f ? 1.0f : e) / (1.0f + e);
+    if (i + 3 < count) {
+
+        const float4 x = vload4(0, data + i);
+
+        const float4 arg =
+            x * (-1.5957691216057308f
+            - 0.0713548162726009f * x * x);
+
+        vstore4(x / (1.0f + exp(arg)), 0, data + i);
+
+    } else {
+
+        for (size_t j = i; j < count; ++j) {
+
+            const float x = data[j];
+
+            const float arg =
+                x * (-1.5957691216057308f
+                - 0.0713548162726009f * x * x);
+
+            data[j] = x / (1.0f + exp(arg));
+        }
     }
 }
 )CLC";
 
-constexpr size_t kWorkGroupSize = 256;
-constexpr int kQueues = 4;
-constexpr size_t kChunk4 = 1u << 18;
+void CheckCL(cl_int error) {
+    if (error != CL_SUCCESS) {
+        throw std::runtime_error(
+            "OpenCL error: " + std::to_string(error)
+        );
+    }
+}
 
 struct Context {
-    int platform_index = -1;
+
+    int platform;
+
     cl_context context = nullptr;
-    cl_command_queue queues[kQueues] = {};
+    cl_command_queue queue = nullptr;
     cl_program program = nullptr;
     cl_kernel kernel = nullptr;
-    cl_kernel tail_kernel = nullptr;
-    cl_mem in = nullptr;
-    cl_mem out = nullptr;
-    size_t capacity = 0;
+    cl_mem buffer = nullptr;
 
-    void ReleaseBuffers() {
-        if (in) clReleaseMemObject(in);
-        if (out) clReleaseMemObject(out);
-        in = out = nullptr;
-        capacity = 0;
+    std::size_t capacity = 0;
+
+    explicit Context(int index) : platform(index) {
+        try {
+            cl_uint platform_count = 0;
+
+            CheckCL(
+                clGetPlatformIDs(
+                    0, nullptr, &platform_count
+                )
+            );
+
+            if (index < 0 ||
+                static_cast<cl_uint>(index) >= platform_count) {
+                throw std::invalid_argument(
+                    "Invalid OpenCL platform"
+                );
+            }
+
+            std::vector<cl_platform_id> platforms(
+                platform_count
+            );
+
+            CheckCL(
+                clGetPlatformIDs(
+                    platform_count,
+                    platforms.data(),
+                    nullptr
+                )
+            );
+
+            cl_device_id device = nullptr;
+
+            CheckCL(
+                clGetDeviceIDs(
+                    platforms[index],
+                    CL_DEVICE_TYPE_GPU,
+                    1,
+                    &device,
+                    nullptr
+                )
+            );
+
+            cl_int error = CL_SUCCESS;
+
+            context = clCreateContext(
+                nullptr, 1, &device,
+                nullptr, nullptr, &error
+            );
+            CheckCL(error);
+
+            queue = clCreateCommandQueue(
+                context, device, 0, &error
+            );
+            CheckCL(error);
+
+            program = clCreateProgramWithSource(
+                context, 1, &kKernelSource,
+                nullptr, &error
+            );
+            CheckCL(error);
+
+            error = clBuildProgram(
+                program, 1, &device,
+                "-cl-mad-enable", nullptr, nullptr
+            );
+
+            if (error != CL_SUCCESS) {
+                std::size_t length = 0;
+
+                CheckCL(
+                    clGetProgramBuildInfo(
+                        program, device,
+                        CL_PROGRAM_BUILD_LOG,
+                        0, nullptr, &length
+                    )
+                );
+
+                std::string log(length, '\0');
+
+                CheckCL(
+                    clGetProgramBuildInfo(
+                        program, device,
+                        CL_PROGRAM_BUILD_LOG,
+                        length, log.data(), nullptr
+                    )
+                );
+
+                throw std::runtime_error(
+                    "OpenCL build failed: " + log
+                );
+            }
+
+            kernel = clCreateKernel(
+                program, "Gelu", &error
+            );
+            CheckCL(error);
+
+        } catch (...) {
+            Release();
+            throw;
+        }
+    }
+
+    ~Context() {
+        Release();
     }
 
     void Release() {
-        ReleaseBuffers();
-        if (kernel) clReleaseKernel(kernel);
-        if (tail_kernel) clReleaseKernel(tail_kernel);
-        if (program) clReleaseProgram(program);
-        for (auto& q : queues)
-            if (q) clReleaseCommandQueue(q);
-        if (context) clReleaseContext(context);
-        *this = Context();
+        if (buffer) {
+            clReleaseMemObject(buffer);
+            buffer = nullptr;
+        }
+
+        if (kernel) {
+            clReleaseKernel(kernel);
+            kernel = nullptr;
+        }
+
+        if (program) {
+            clReleaseProgram(program);
+            program = nullptr;
+        }
+
+        if (queue) {
+            clReleaseCommandQueue(queue);
+            queue = nullptr;
+        }
+
+        if (context) {
+            clReleaseContext(context);
+            context = nullptr;
+        }
+
+        capacity = 0;
     }
 
-    bool Init(int platform) {
-        if (platform_index == platform) return true;
-        Release();
-
-        cl_uint platform_count = 0;
-        clGetPlatformIDs(0, nullptr, &platform_count);
-        if (platform < 0 || static_cast<cl_uint>(platform) >= platform_count) return false;
-        std::vector<cl_platform_id> platforms(platform_count);
-        clGetPlatformIDs(platform_count, platforms.data(), nullptr);
-
-        cl_uint device_count = 0;
-        clGetDeviceIDs(platforms[platform], CL_DEVICE_TYPE_GPU, 0, nullptr, &device_count);
-        if (device_count == 0) return false;
-        std::vector<cl_device_id> devices(device_count);
-        clGetDeviceIDs(platforms[platform], CL_DEVICE_TYPE_GPU, device_count, devices.data(), nullptr);
-        cl_device_id device = devices[0];
-
-        cl_int err = CL_SUCCESS;
-        context = clCreateContext(nullptr, 1, &device, nullptr, nullptr, &err);
-        if (err != CL_SUCCESS) return false;
-        for (auto& q : queues) {
-            q = clCreateCommandQueue(context, device, 0, &err);
-            if (err != CL_SUCCESS) return false;
+    void Reserve(std::size_t bytes) {
+        if (bytes <= capacity) {
+            return;
         }
-        program = clCreateProgramWithSource(context, 1, &kKernelSource, nullptr, &err);
-        if (err != CL_SUCCESS) return false;
-        if (clBuildProgram(program, 1, &device, "-cl-mad-enable", nullptr, nullptr) != CL_SUCCESS)
-            return false;
-        kernel = clCreateKernel(program, "Gelu", &err);
-        if (err != CL_SUCCESS) return false;
-        tail_kernel = clCreateKernel(program, "GeluTail", &err);
-        if (err != CL_SUCCESS) return false;
-        platform_index = platform;
-        return true;
-    }
 
-    bool Reserve(size_t count) {
-        if (count <= capacity) return true;
-        ReleaseBuffers();
-        cl_int e1 = CL_SUCCESS, e2 = CL_SUCCESS;
-        in = clCreateBuffer(context, CL_MEM_READ_ONLY, count * sizeof(float), nullptr, &e1);
-        out = clCreateBuffer(context, CL_MEM_WRITE_ONLY, count * sizeof(float), nullptr, &e2);
-        if (e1 != CL_SUCCESS || e2 != CL_SUCCESS) {
-            ReleaseBuffers();
-            return false;
+        cl_int error = CL_SUCCESS;
+
+        cl_mem next = clCreateBuffer(
+            context,
+            CL_MEM_READ_WRITE,
+            bytes,
+            nullptr,
+            &error
+        );
+
+        CheckCL(error);
+
+        if (buffer) {
+            clReleaseMemObject(buffer);
         }
-        capacity = count;
-        return true;
+
+        buffer = next;
+        capacity = bytes;
     }
 };
 
-}  // namespace
+} // namespace
 
-std::vector<float> GeluOCL(const std::vector<float>& input, int platform) {
-    const size_t n = input.size();
-    if (n == 0) return {};
-
-    static Context ctx;
-    if (!ctx.Init(platform) || !ctx.Reserve(n)) return {};
-
-    const size_t n4 = n / 4;
-    const size_t tail_off = n4 * 4;
-    const size_t tail = n - tail_off;
-    const size_t chunks = (n4 + kChunk4 - 1) / kChunk4;
-
-    clSetKernelArg(ctx.kernel, 0, sizeof(cl_mem), &ctx.in);
-    clSetKernelArg(ctx.kernel, 1, sizeof(cl_mem), &ctx.out);
-
-    for (size_t c = 0; c < chunks; ++c) {
-        const size_t off4 = c * kChunk4;
-        const size_t cnt4 = std::min(kChunk4, n4 - off4);
-        cl_command_queue q = ctx.queues[c % kQueues];
-
-        clEnqueueWriteBuffer(q, ctx.in, CL_FALSE, off4 * 16, cnt4 * 16,
-                             input.data() + off4 * 4, 0, nullptr, nullptr);
-
-        const cl_uint end4 = static_cast<cl_uint>(off4 + cnt4);
-        clSetKernelArg(ctx.kernel, 2, sizeof(cl_uint), &end4);
-        const size_t global = (cnt4 + kWorkGroupSize - 1) / kWorkGroupSize * kWorkGroupSize;
-        clEnqueueNDRangeKernel(q, ctx.kernel, 1, &off4, &global, &kWorkGroupSize,
-                               0, nullptr, nullptr);
+std::vector<float> GeluOCL(
+    const std::vector<float>& input,
+    int platform
+) {
+    if (input.empty()) {
+        return {};
     }
 
-    cl_command_queue tail_q = ctx.queues[chunks % kQueues];
-    if (tail > 0) {
-        clEnqueueWriteBuffer(tail_q, ctx.in, CL_FALSE, tail_off * 4, tail * 4,
-                             input.data() + tail_off, 0, nullptr, nullptr);
-        const cl_uint offset = static_cast<cl_uint>(tail_off);
-        const cl_uint total = static_cast<cl_uint>(n);
-        clSetKernelArg(ctx.tail_kernel, 0, sizeof(cl_mem), &ctx.in);
-        clSetKernelArg(ctx.tail_kernel, 1, sizeof(cl_mem), &ctx.out);
-        clSetKernelArg(ctx.tail_kernel, 2, sizeof(cl_uint), &offset);
-        clSetKernelArg(ctx.tail_kernel, 3, sizeof(cl_uint), &total);
-        clEnqueueNDRangeKernel(tail_q, ctx.tail_kernel, 1, nullptr, &tail, nullptr,
-                               0, nullptr, nullptr);
+    thread_local std::unique_ptr<Context> state;
+
+    if (!state || state->platform != platform) {
+        state = std::make_unique<Context>(platform);
     }
 
-    for (auto q : ctx.queues) clFlush(q);
+    const std::size_t n = input.size();
+    const std::size_t bytes = n * sizeof(float);
 
-    std::vector<float> output(n);
+    state->Reserve(bytes);
 
-    for (size_t c = 0; c < chunks; ++c) {
-        const size_t off4 = c * kChunk4;
-        const size_t cnt4 = std::min(kChunk4, n4 - off4);
-        clEnqueueReadBuffer(ctx.queues[c % kQueues], ctx.out, CL_FALSE, off4 * 16, cnt4 * 16,
-                            output.data() + off4 * 4, 0, nullptr, nullptr);
+    const cl_ulong count = static_cast<cl_ulong>(n);
+
+    CheckCL(
+        clSetKernelArg(
+            state->kernel,
+            0,
+            sizeof(cl_mem),
+            &state->buffer
+        )
+    );
+
+    CheckCL(
+        clSetKernelArg(
+            state->kernel,
+            1,
+            sizeof(count),
+            &count
+        )
+    );
+
+    constexpr std::size_t local = 256;
+
+    const std::size_t work_items = (n + 3) / 4;
+
+    const std::size_t global =
+        ((work_items + local - 1) / local) * local;
+
+    auto output = std::async(
+        std::launch::async,
+        [n]() {
+            return std::vector<float>(n);
+        }
+    );
+
+    CheckCL(
+        clEnqueueWriteBuffer(
+            state->queue,
+            state->buffer,
+            CL_FALSE,
+            0,
+            bytes,
+            input.data(),
+            0,
+            nullptr,
+            nullptr
+        )
+    );
+
+    try {
+        CheckCL(
+            clEnqueueNDRangeKernel(
+                state->queue,
+                state->kernel,
+                1,
+                nullptr,
+                &global,
+                &local,
+                0,
+                nullptr,
+                nullptr
+            )
+        );
+
+        CheckCL(clFlush(state->queue));
+
+        std::vector<float> result = output.get();
+
+        CheckCL(
+            clEnqueueReadBuffer(
+                state->queue,
+                state->buffer,
+                CL_TRUE,
+                0,
+                bytes,
+                result.data(),
+                0,
+                nullptr,
+                nullptr
+            )
+        );
+
+        return result;
+
+    } catch (...) {
+        clFinish(state->queue);
+        throw;
     }
-    if (tail > 0) {
-        clEnqueueReadBuffer(tail_q, ctx.out, CL_FALSE, tail_off * 4, tail * 4,
-                            output.data() + tail_off, 0, nullptr, nullptr);
-    }
-
-    for (auto q : ctx.queues) clFinish(q);
-    return output;
 }
