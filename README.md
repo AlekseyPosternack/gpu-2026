@@ -828,6 +828,7 @@ std::vector<float> GeluOCL(const std::vector<float>& input, int platform) {
 |3823B1PE1|lazareva_ann|0.2180|9|
 |3823B1PE4|romanov_michail|0.2190|6|
 |3823B1PE1|kondrashova_victoria|0.2490|6|
+|3823B1PE4|baranov_andrey|0.2880|10|
 |3823B1PE4|terekhov_dmitriy|0.3640|4|
 |3823B1PE4|muhammadkhon_isram|RUN FAILED|-|
 |3823B1PE3|afanasyev_alexandr|TEST FAILED|-|
@@ -965,7 +966,7 @@ Passed: 5
 ## 3823B1PE4
 |Group|Name|Passed|Score|
 |-----|----|------|-----|
-|3823B1PE4|baranov_andrey|6/8|287|
+|3823B1PE4|baranov_andrey|7/8|334|
 |3823B1PE4|dilshodov_adkham|**8/8**|**497**|
 |3823B1PE4|imanov_sabutay|**8/8**|**373**|
 |3823B1PE4|karpich_ivan|**8/8**|**442**|
@@ -975,7 +976,7 @@ Passed: 5
 |3823B1PE4|romanov_michail|**8/8**|**421**|
 |3823B1PE4|safronov_maksim|4/8|187|
 |3823B1PE4|sinev_timur|**8/8**|**352**|
-|3823B1PE4|terekhov_dmitriy|**8/8**|**407**|
+|3823B1PE4|terekhov_dmitriy|**8/8**|**406**|
 |3823B1PE4|trofimov_nikita|4/8|182|
 |3823B1PE4|tsarkov_klim|**8/8**|**411**|
 |3823B1PE4|urin_oleg|5/8|252|
