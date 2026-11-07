@@ -736,6 +736,7 @@ std::vector<float> GeluOCL(const std::vector<float>& input, int platform) {
 |**REF**|**REF**|**0.0591**|**-**|
 |3823B1PE1|lazareva_ann|0.0600|10|
 |3823B1PE3|afanasyev_alexandr|0.7127|6|
+|3823B1FI2|rozenberg_alexey|BUILD FAILED|-|
 
 ## 6_softmax_cuda (8192x16384 elements)
 |Group|Name|Result|Rank|
