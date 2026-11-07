@@ -1,155 +1,214 @@
+
 import numpy as np
-import pycuda.autoinit  # noqa: F401
+import pycuda.autoinit
 import pycuda.driver as cuda
 from pycuda.compiler import SourceModule
+from pycuda.tools import DeviceMemoryPool, context_dependent_memoize
 
-_KERNEL_SOURCE = r"""
-#define WARP_SIZE 32
-#define MAX_BLOCK_SIZE 256
 
-__device__ __forceinline__ float WarpSum(float v) {
+_SOURCE = r"""
+template<int Stage>
+__device__ float reduce_sum(float value) {
+    __shared__ float partial[8];
+
+    const int lane = threadIdx.x % 32;
+
     #pragma unroll
-    for (int o = WARP_SIZE / 2; o > 0; o >>= 1)
-        v += __shfl_xor_sync(0xffffffff, v, o);
-    return v;
-}
+    for (int offset = 16; offset > 0; offset /= 2) {
+        value += __shfl_down_sync(0xffffffffu, value, offset);
+    }
 
-// Сумма по блоку, результат у всех потоков
-__device__ float BlockSum(float v, float* red) {
-    const int lane = threadIdx.x % WARP_SIZE;
-    const int warp = threadIdx.x / WARP_SIZE;
-    v = WarpSum(v);
-    __syncthreads();                       // red мог использоваться прошлой редукцией
-    if (lane == 0) red[warp] = v;
+    if (lane == 0) {
+        partial[threadIdx.x / 32] = value;
+    }
+
     __syncthreads();
-    v = lane < blockDim.x / WARP_SIZE ? red[lane] : 0.0f;
-    return WarpSum(v);                     // все варпы считают одно и то же
+
+    value = threadIdx.x < 8 ? partial[threadIdx.x] : 0.0f;
+
+    if (threadIdx.x < 32) {
+        #pragma unroll
+        for (int offset = 16; offset > 0; offset /= 2) {
+            value += __shfl_down_sync(0xffffffffu, value, offset);
+        }
+
+        if (lane == 0) {
+            partial[0] = value;
+        }
+    }
+
+    __syncthreads();
+
+    return partial[0];
 }
 
-// Один блок = одна строка. cached != 0: строка целиком в shared memory.
-// vec4 != 0: row_size % 4 == 0, работаем через float4.
-__global__ void LayerNorm(const float* __restrict__ in, const float* __restrict__ gamma,
-                          const float* __restrict__ beta, float* __restrict__ out,
-                          int row_size, float eps, int cached, int vec4) {
-    extern __shared__ float cache[];
-    __shared__ float red[MAX_BLOCK_SIZE / WARP_SIZE];
 
-    const size_t base = (size_t)blockIdx.x * row_size;
-    const float* row_in = in + base;
-    float* row_out = out + base;
-    const int tid = threadIdx.x;
+extern "C" __global__ void layernorm(
+    float* data,
+    const float* gamma,
+    const float* beta,
+    int width,
+    float eps
+) {
+    float* row = data + static_cast<size_t>(blockIdx.x) * width;
 
-    // Проход 1: сумма (единственное чтение строки из глобальной памяти)
+    const float anchor = row[0];
+    const bool cached = width <= 16384;
+
+    float values[64];
+
     float sum = 0.0f;
-    if (vec4) {
-        const float4* in4 = reinterpret_cast<const float4*>(row_in);
-        for (int i = tid; i < row_size / 4; i += blockDim.x) {
-            const float4 v = in4[i];
-            if (cached) reinterpret_cast<float4*>(cache)[i] = v;
-            sum += (v.x + v.y) + (v.z + v.w);
+
+    // Pass 1: mean
+    if (cached) {
+        #pragma unroll
+        for (int i = 0; i < 64; ++i) {
+            const int col = threadIdx.x + i * 256;
+
+            values[i] = col < width
+                ? row[col] - anchor
+                : 0.0f;
+
+            sum += values[i];
         }
     } else {
-        for (int i = tid; i < row_size; i += blockDim.x) {
-            const float v = row_in[i];
-            if (cached) cache[i] = v;
-            sum += v;
+        for (int col = threadIdx.x; col < width; col += 256) {
+            sum += row[col] - anchor;
         }
     }
-    const float mean = BlockSum(sum, red) / row_size;
 
-    // Проход 2: двухпроходная дисперсия (данные в shared или L2)
-    float sq = 0.0f;
-    if (vec4) {
-        for (int i = tid; i < row_size / 4; i += blockDim.x) {
-            const float4 v = cached ? reinterpret_cast<const float4*>(cache)[i]
-                                    : reinterpret_cast<const float4*>(row_in)[i];
-            const float a = v.x - mean, b = v.y - mean, c = v.z - mean, d = v.w - mean;
-            sq += (a * a + b * b) + (c * c + d * d);
+    const float mean = reduce_sum<0>(sum) / width;
+
+    // Pass 2: variance
+    float variance = 0.0f;
+
+    if (cached) {
+        #pragma unroll
+        for (int i = 0; i < 64; ++i) {
+            const int col = threadIdx.x + i * 256;
+
+            values[i] = col < width
+                ? values[i] - mean
+                : 0.0f;
+
+            variance = fmaf(
+                values[i],
+                values[i],
+                variance
+            );
         }
     } else {
-        for (int i = tid; i < row_size; i += blockDim.x) {
-            const float d = (cached ? cache[i] : row_in[i]) - mean;
-            sq += d * d;
+        for (int col = threadIdx.x; col < width; col += 256) {
+            const float value = (row[col] - anchor) - mean;
+
+            variance = fmaf(
+                value,
+                value,
+                variance
+            );
         }
     }
-    const float inv_std = rsqrtf(BlockSum(sq, red) / row_size + eps);
 
-    // Проход 3: нормировка
-    if (vec4) {
-        const float4* g4 = reinterpret_cast<const float4*>(gamma);
-        const float4* b4 = reinterpret_cast<const float4*>(beta);
-        float4* out4 = reinterpret_cast<float4*>(row_out);
-        for (int i = tid; i < row_size / 4; i += blockDim.x) {
-            const float4 v = cached ? reinterpret_cast<const float4*>(cache)[i]
-                                    : reinterpret_cast<const float4*>(row_in)[i];
-            const float4 g = g4[i], b = b4[i];
-            float4 r;
-            r.x = (v.x - mean) * inv_std * g.x + b.x;
-            r.y = (v.y - mean) * inv_std * g.y + b.y;
-            r.z = (v.z - mean) * inv_std * g.z + b.z;
-            r.w = (v.w - mean) * inv_std * g.w + b.w;
-            out4[i] = r;
+    const float inverse = rsqrtf(
+        reduce_sum<1>(variance) / width + eps
+    );
+
+    // Pass 3: normalization
+    if (cached) {
+        #pragma unroll
+        for (int i = 0; i < 64; ++i) {
+            const int col = threadIdx.x + i * 256;
+
+            if (col < width) {
+                row[col] =
+                    values[i] * inverse * gamma[col] + beta[col];
+            }
         }
     } else {
-        for (int i = tid; i < row_size; i += blockDim.x) {
-            const float v = cached ? cache[i] : row_in[i];
-            row_out[i] = (v - mean) * inv_std * gamma[i] + beta[i];
+        for (int col = threadIdx.x; col < width; col += 256) {
+            row[col] =
+                ((row[col] - anchor) - mean)
+                * inverse * gamma[col] + beta[col];
         }
     }
 }
 """
 
-_WARP_SIZE = 32
-_MAX_BLOCK_SIZE = 256
-_MAX_CACHED_ROW = 8192
 
-_module = SourceModule(_KERNEL_SOURCE)
-_kernel = _module.get_function("LayerNorm")
-_kernel.prepare("PPPPifii" + "i")
+@context_dependent_memoize
+def _resources():
+    module = SourceModule(
+        _SOURCE,
+        options=["-O3"],
+        no_extern_c=True
+    )
 
-_buffers = {}
+    kernel = module.get_function("layernorm")
+    kernel.prepare("PPPif")
 
-
-def _device_buffer(name, nbytes):
-    buf = _buffers.get(name)
-    if buf is None or buf[1] < nbytes:
-        buf = (cuda.mem_alloc(max(nbytes, 1)), nbytes)
-        _buffers[name] = buf
-    return buf[0]
+    return kernel, DeviceMemoryPool()
 
 
 def layernorm_pycuda(input, gamma, beta, row_size, eps=1e-5):
-    x = np.ascontiguousarray(input, dtype=np.float32).ravel()
-    g = np.ascontiguousarray(gamma, dtype=np.float32).ravel()
-    b = np.ascontiguousarray(beta, dtype=np.float32).ravel()
+
+    if row_size <= 0 or int(row_size) != row_size:
+        raise ValueError("row_size must be a positive integer")
+
     row_size = int(row_size)
+
+    if row_size & (row_size - 1):
+        raise ValueError("row_size must be a power of 2")
+
+    eps = np.float32(eps)
+
+    if not np.isfinite(eps) or eps <= 0:
+        raise ValueError("eps must be finite and positive")
+
+    x = np.ascontiguousarray(
+        input, dtype=np.float32
+    ).reshape(-1)
+
+    g = np.ascontiguousarray(
+        gamma, dtype=np.float32
+    ).reshape(-1)
+
+    b = np.ascontiguousarray(
+        beta, dtype=np.float32
+    ).reshape(-1)
+
+    if x.size % row_size or g.size != row_size or b.size != row_size:
+        raise ValueError(
+            "Input, gamma or beta size does not match row_size"
+        )
+
+    output = np.empty_like(x)
+
     if x.size == 0:
-        return np.empty(0, dtype=np.float32)
-    row_count = x.size // row_size
+        return output
 
-    d_in = _device_buffer("in", x.nbytes)
-    d_out = _device_buffer("out", x.nbytes)
-    d_gamma = _device_buffer("gamma", g.nbytes)
-    d_beta = _device_buffer("beta", b.nbytes)
-    cuda.memcpy_htod(d_in, x)
-    cuda.memcpy_htod(d_gamma, g)
-    cuda.memcpy_htod(d_beta, b)
+    kernel, pool = _resources()
 
-    vec4 = row_size % 4 == 0
-    work = row_size // 4 if vec4 else row_size
-    block_size = _WARP_SIZE
-    while block_size < _MAX_BLOCK_SIZE and block_size < work:
-        block_size *= 2
+    allocations = [
+        pool.allocate(array.nbytes)
+        for array in (x, g, b)
+    ]
 
-    cached = row_size <= _MAX_CACHED_ROW
-    shared = row_size * 4 if cached else 0
+    try:
+        for device, array in zip(allocations, (x, g, b)):
+            cuda.memcpy_htod(device, array)
 
-    _kernel.prepared_call((row_count, 1), (block_size, 1, 1),
-                          d_in, d_gamma, d_beta, d_out,
-                          np.int32(row_size), np.float32(eps),
-                          np.int32(cached), np.int32(vec4),
-                          shared_size=shared)
+        kernel.prepared_call(
+            (x.size // row_size, 1, 1),
+            (256, 1, 1),
+            *allocations,
+            np.int32(row_size),
+            eps
+        )
 
-    out = np.empty_like(x)
-    cuda.memcpy_dtoh(out, d_out)
-    return out
+        cuda.memcpy_dtoh(output, allocations[0])
+
+    finally:
+        for device in allocations:
+            device.free()
+
+    return output
