@@ -36,12 +36,22 @@ def layernorm_pycuda(input, gamma, beta, row_size, eps=1e-5):
         Flattened matrix of the same shape as input, containing the row-wise
         normalized results.
     """
+    try:
+        row_size = int(row_size)
+    except (TypeError, ValueError) as exc:
+        raise ValueError("row_size must be a positive integer") from exc
+
+    if row_size <= 0:
+        raise ValueError("row_size must be a positive integer")
+
     arr = np.asarray(input, dtype=np.float32)
     gamma = np.asarray(gamma, dtype=np.float32)
     beta = np.asarray(beta, dtype=np.float32)
 
     if arr.ndim != 1:
         arr = arr.ravel()
+    if arr.size == 0:
+        return arr.copy()
     if arr.size % row_size != 0:
         raise ValueError("input length must be divisible by row_size")
     if gamma.size != row_size or beta.size != row_size:
@@ -63,6 +73,8 @@ def layernorm_pycuda(input, gamma, beta, row_size, eps=1e-5):
     row_count = arr.size // row_size
     block = 256
     grid = (row_count + block - 1) // block
+    if row_count == 0:
+        return arr.copy()
 
     kernel_source = r"""
     __global__ void layernorm_kernel(const float *input,
