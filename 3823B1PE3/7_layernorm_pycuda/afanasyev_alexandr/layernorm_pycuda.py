@@ -54,6 +54,13 @@ def layernorm_pycuda(input, gamma, beta, row_size, eps=1e-5):
         return arr.copy()
     if arr.size % row_size != 0:
         raise ValueError("input length must be divisible by row_size")
+
+    gamma = gamma.reshape(-1)
+    beta = beta.reshape(-1)
+    if gamma.size == 1 and row_size > 1:
+        gamma = np.full(row_size, gamma.item(), dtype=np.float32)
+    if beta.size == 1 and row_size > 1:
+        beta = np.full(row_size, beta.item(), dtype=np.float32)
     if gamma.size != row_size or beta.size != row_size:
         raise ValueError("gamma and beta must each have length row_size")
 
