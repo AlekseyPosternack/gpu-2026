@@ -1,5 +1,0 @@
-/home/crazyproger/sandbox/gpu-2026/3823B1FI2/5_gemm_cublas/rozenberg_alexey/gemm_cublas.cu(44): error: identifier "CublassContext" is undefined
-      static CublassContext ctx;
-             ^
-
-1 error detected in the compilation of "/home/crazyproger/sandbox/gpu-2026/3823B1FI2/5_gemm_cublas/rozenberg_alexey/gemm_cublas.cu".
