@@ -1,4 +1,3 @@
-%%writefile gelu_ocl.h
 #ifndef __GELU_OCL_H
 #define __GELU_OCL_H
 
