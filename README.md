@@ -869,6 +869,7 @@ std::vector<float> GeluOCL(const std::vector<float>& input, int platform) {
 |3823B1PE4|imanov_sabutay|0.2448|8|
 |3823B1PE2|olesnitskiy_vladimir|0.2454|8|
 |3823B1PE3|marin_lev|0.2457|3|
+|3823B1PE2|kolotukhin_alexander|0.2461|9|
 |3823B1PE2|klimenko_vladislav|0.2468|1|
 |3823B1PE1|perepelkin_iaroslav|0.2472|4|
 |3823B1PE1|ivanova_polina|0.2485|7|
@@ -949,19 +950,19 @@ Passed: 11
 |Group|Name|Passed|Score|
 |-----|----|------|-----|
 |3823B1PE2|akhmetov_daniil|**8/8**|**435**|
-|3823B1PE2|klimenko_vladislav|**8/8**|**449**|
-|3823B1PE2|kolotukhin_alexander|7/8|375|
-|3823B1PE2|kotelnikova_anastasia|**8/8**|**436**|
+|3823B1PE2|klimenko_vladislav|**8/8**|**448**|
+|3823B1PE2|kolotukhin_alexander|**8/8**|**426**|
+|3823B1PE2|kotelnikova_anastasia|**8/8**|**435**|
 |3823B1PE2|olesnitskiy_vladimir|**8/8**|**396**|
 |3823B1PE2|ovchinnikov_matvey|2/8|102|
 |3823B1PE2|sinev_artem|7/8|386|
 |3823B1PE2|tsyplakov_kirill|4/8|199|
 |3823B1PE2|vasiliev_mikhail|**8/8**|**461**|
 |3823B1PE2|viderman_aleksandra|**8/8**|**463**|
-|3823B1PE2|zorin_danila_artemovich|**8/8**|**435**|
+|3823B1PE2|zorin_danila_artemovich|**8/8**|**434**|
 |3823B1PE2|zyuzin_nikita|**8/8**|**429**|
 
-Passed: 8
+Passed: 9
 
 ## 3823B1PE3
 |Group|Name|Passed|Score|
@@ -999,7 +1000,7 @@ Passed: 6
 
 Passed: 10
 
-**Total Passed: 39**
+**Total Passed: 40**
 
 ---
 *Maximum Score: 512 (64 per task)*
