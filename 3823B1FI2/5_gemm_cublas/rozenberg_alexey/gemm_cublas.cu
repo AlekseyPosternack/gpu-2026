@@ -41,7 +41,7 @@ std::vector<float> GemmCUBLAS(const std::vector<float>& a,
                               int n) {
     if (n <= 0) return {};
 
-    static CublassContext ctx;
+    static CublasContext ctx;
 
     size_t num_elements = static_cast<size_t>(n) * n;
     size_t bytes = num_elements * sizeof(float);
