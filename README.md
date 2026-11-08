@@ -873,6 +873,7 @@ std::vector<float> GeluOCL(const std::vector<float>& input, int platform) {
 |3823B1PE3|marin_lev|0.2457|3|
 |3823B1PE2|kolotukhin_alexander|0.2461|9|
 |3823B1PE2|klimenko_vladislav|0.2468|1|
+|3823B1PE1|tsibareva_ekaterina|0.2472|12|
 |3823B1PE1|perepelkin_iaroslav|0.2472|4|
 |3823B1PE1|ivanova_polina|0.2485|7|
 |3823B1PE1|redkina_alina|0.2500|1|
@@ -893,7 +894,6 @@ std::vector<float> GeluOCL(const std::vector<float>& input, int platform) {
 |3823B1PE2|zorin_danila_artemovich|0.4599|3|
 |3823B1PE4|sinev_timur|0.4601|7|
 |3823B1PE2|sinev_artem|TEST FAILED|-|
-|3823B1PE1|tsibareva_ekaterina|BUILD FAILED|-|
 
 # Tasks Done
 ## 3823B1FI1
@@ -927,26 +927,26 @@ Passed: 1
 ## 3823B1PE1
 |Group|Name|Passed|Score|
 |-----|----|------|-----|
-|3823B1PE1|chernov_timur|**8/8**|**341**|
-|3823B1PE1|golovanov_daniil|**8/8**|**387**|
-|3823B1PE1|ivanova_polina|**8/8**|**402**|
-|3823B1PE1|kondrashova_victoria|**8/8**|**374**|
-|3823B1PE1|lazareva_ann|**8/8**|**366**|
+|3823B1PE1|chernov_timur|**8/8**|**340**|
+|3823B1PE1|golovanov_daniil|**8/8**|**386**|
+|3823B1PE1|ivanova_polina|**8/8**|**401**|
+|3823B1PE1|kondrashova_victoria|**8/8**|**373**|
+|3823B1PE1|lazareva_ann|**8/8**|**365**|
 |3823B1PE1|makoveeva_sofia|1/8|51|
 |3823B1PE1|melnik_ivan|5/8|249|
 |3823B1PE1|morozov_nikita|1/8|49|
 |3823B1PE1|otcheskov_semyon|**8/8**|**462**|
-|3823B1PE1|perepelkin_iaroslav|**8/8**|**461**|
+|3823B1PE1|perepelkin_iaroslav|**8/8**|**460**|
 |3823B1PE1|popova_elizaveta|6/8|240|
-|3823B1PE1|redkina_alina|**8/8**|**471**|
+|3823B1PE1|redkina_alina|**8/8**|**470**|
 |3823B1PE1|rusakova_aleksandra|**8/8**|**463**|
-|3823B1PE1|shilin_nikita|**8/8**|**445**|
+|3823B1PE1|shilin_nikita|**8/8**|**444**|
 |3823B1PE1|tabalaev_anton|6/8|296|
-|3823B1PE1|tsibareva_ekaterina|7/8|327|
+|3823B1PE1|tsibareva_ekaterina|**8/8**|**377**|
 |3823B1PE1|zhurin_ivan|**8/8**|**371**|
 |3823B1PE1|zyazeva_svetlana|2/8|69|
 
-Passed: 11
+Passed: 12
 
 ## 3823B1PE2
 |Group|Name|Passed|Score|
@@ -1002,7 +1002,7 @@ Passed: 6
 
 Passed: 10
 
-**Total Passed: 40**
+**Total Passed: 41**
 
 ---
 *Maximum Score: 512 (64 per task)*
