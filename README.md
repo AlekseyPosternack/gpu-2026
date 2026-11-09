@@ -566,8 +566,8 @@ std::vector<float> GeluOCL(const std::vector<float>& input, int platform) {
 |3823B1PE2|viderman_aleksandra|0.0393|5|
 |3823B1PE1|melnik_ivan|0.0407|14|
 |3823B1PE4|karpich_ivan|0.0415|12|
-|3823B1FI2|ashihmin_daniil|0.0420|5|
 |3823B1PE3|rastvorov_kirill|0.0420|6|
+|3823B1FI2|ashihmin_daniil|0.0420|5|
 |3823B1FI2|volkov_aleksei|0.0440|4|
 |3823B1PE4|remizov_kirill|0.0444|4|
 |3823B1FI1|krykov_egor|0.0453|3|
@@ -708,6 +708,7 @@ std::vector<float> GeluOCL(const std::vector<float>& input, int platform) {
 |3823B1PE3|dergachev_arseniy|0.0363|1|
 |3823B1PE1|otcheskov_semyon|0.0363|4|
 |3823B1PE2|akhmetov_daniil|0.0364|8|
+|3823B1FI2|sannikov_ivan|0.0366|2|
 |3823B1PE4|imanov_sabutay|0.0368|13|
 |3823B1PE4|safronov_maksim|0.0369|15|
 |3823B1PE3|batkov_filipp|0.0370|8|
@@ -917,7 +918,7 @@ Passed: 3
 |3823B1FI2|ashihmin_daniil|3/8|178|
 |3823B1FI2|chyokotov_alexey|4/8|242|
 |3823B1FI2|rozenberg_alexey|5/8|307|
-|3823B1FI2|sannikov_ivan|4/8|241|
+|3823B1FI2|sannikov_ivan|5/8|303|
 |3823B1FI2|volkov_aleksei|3/8|182|
 
 Passed: 0
