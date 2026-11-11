@@ -457,8 +457,8 @@ std::vector<float> GeluOCL(const std::vector<float>& input, int platform) {
 |3823B1FI1|zenin_anton|0.2408|1|
 |3823B1FI2|sannikov_ivan|0.2410|2|
 |3823B1PE1|kondrashova_victoria|0.2416|10|
-|3823B1PE4|vdovin_artem|0.2446|15|
 |3823B1PE2|ovchinnikov_matvey|0.2446|11|
+|3823B1PE4|vdovin_artem|0.2446|15|
 |3823B1PE3|marin_lev|0.2457|4|
 |3823B1PE4|peryashkin_vasily|0.2506|4|
 |3823B1FI1|krykov_egor|0.2522|3|
@@ -815,6 +815,7 @@ std::vector<float> GeluOCL(const std::vector<float>& input, int platform) {
 |3823B1PE1|perepelkin_iaroslav|0.1420|4|
 |3823B1PE1|ivanova_polina|0.1420|7|
 |3823B1PE4|dilshodov_adkham|0.1440|1|
+|3823B1PE1|tabalaev_anton|0.1450|14|
 |3823B1FI1|dorofeev_ivan|0.1450|1|
 |3823B1PE1|rusakova_aleksandra|0.1460|2|
 |3823B1PE1|popova_elizaveta|0.1460|13|
@@ -938,23 +939,23 @@ Passed: 1
 ## 3823B1PE1
 |Group|Name|Passed|Score|
 |-----|----|------|-----|
-|3823B1PE1|chernov_timur|**8/8**|**337**|
-|3823B1PE1|golovanov_daniil|**8/8**|**383**|
+|3823B1PE1|chernov_timur|**8/8**|**336**|
+|3823B1PE1|golovanov_daniil|**8/8**|**382**|
 |3823B1PE1|ivanova_polina|**8/8**|**399**|
-|3823B1PE1|kondrashova_victoria|**8/8**|**370**|
-|3823B1PE1|lazareva_ann|**8/8**|**362**|
+|3823B1PE1|kondrashova_victoria|**8/8**|**369**|
+|3823B1PE1|lazareva_ann|**8/8**|**361**|
 |3823B1PE1|makoveeva_sofia|1/8|51|
 |3823B1PE1|melnik_ivan|6/8|299|
 |3823B1PE1|morozov_nikita|1/8|49|
 |3823B1PE1|otcheskov_semyon|**8/8**|**461**|
 |3823B1PE1|perepelkin_iaroslav|**8/8**|**459**|
-|3823B1PE1|popova_elizaveta|**8/8**|**334**|
-|3823B1PE1|redkina_alina|**8/8**|**467**|
-|3823B1PE1|rusakova_aleksandra|**8/8**|**462**|
-|3823B1PE1|shilin_nikita|**8/8**|**441**|
-|3823B1PE1|tabalaev_anton|6/8|295|
-|3823B1PE1|tsibareva_ekaterina|**8/8**|**375**|
-|3823B1PE1|zhurin_ivan|**8/8**|**369**|
+|3823B1PE1|popova_elizaveta|**8/8**|**333**|
+|3823B1PE1|redkina_alina|**8/8**|**466**|
+|3823B1PE1|rusakova_aleksandra|**8/8**|**461**|
+|3823B1PE1|shilin_nikita|**8/8**|**440**|
+|3823B1PE1|tabalaev_anton|7/8|343|
+|3823B1PE1|tsibareva_ekaterina|**8/8**|**374**|
+|3823B1PE1|zhurin_ivan|**8/8**|**368**|
 |3823B1PE1|zyazeva_svetlana|2/8|69|
 
 Passed: 13
