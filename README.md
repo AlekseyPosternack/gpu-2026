@@ -521,6 +521,7 @@ std::vector<float> GeluOCL(const std::vector<float>& input, int platform) {
 |3823B1PE2|kolotukhin_alexander|0.2435|7|
 |3823B1PE1|rusakova_aleksandra|0.2437|3|
 |3823B1PE1|melnik_ivan|0.2444|10|
+|3823B1PE4|vdovin_artem|0.2447|15|
 |3823B1FI1|krykov_egor|0.2449|2|
 |3823B1PE3|marin_lev|0.2451|4|
 |3823B1PE1|golovanov_daniil|0.2462|8|
@@ -873,8 +874,8 @@ std::vector<float> GeluOCL(const std::vector<float>& input, int platform) {
 |3823B1PE4|peryashkin_vasily|0.2377|3|
 |3823B1PE1|tabalaev_anton|0.2381|14|
 |3823B1PE3|dergachev_arseniy|0.2382|1|
-|3823B1FI3|lifanov_kirill|0.2386|1|
 |3823B1PE1|rusakova_aleksandra|0.2386|2|
+|3823B1FI3|lifanov_kirill|0.2386|1|
 |3823B1PE4|dilshodov_adkham|0.2399|1|
 |3823B1PE4|safronov_maksim|0.2408|11|
 |3823B1PE2|vasiliev_mikhail|0.2410|4|
@@ -997,22 +998,22 @@ Passed: 7
 ## 3823B1PE4
 |Group|Name|Passed|Score|
 |-----|----|------|-----|
-|3823B1PE4|baranov_andrey|**8/8**|**375**|
+|3823B1PE4|baranov_andrey|**8/8**|**374**|
 |3823B1PE4|dilshodov_adkham|**8/8**|**495**|
-|3823B1PE4|imanov_sabutay|**8/8**|**367**|
+|3823B1PE4|imanov_sabutay|**8/8**|**366**|
 |3823B1PE4|karpich_ivan|**8/8**|**440**|
-|3823B1PE4|muhammadkhon_isram|**8/8**|**389**|
+|3823B1PE4|muhammadkhon_isram|**8/8**|**388**|
 |3823B1PE4|peryashkin_vasily|**8/8**|**458**|
 |3823B1PE4|remizov_kirill|6/8|354|
 |3823B1PE4|romanov_michail|**8/8**|**415**|
-|3823B1PE4|safronov_maksim|**8/8**|**378**|
-|3823B1PE4|sinev_timur|**8/8**|**344**|
-|3823B1PE4|terekhov_dmitriy|**8/8**|**400**|
-|3823B1PE4|trofimov_nikita|6/8|259|
-|3823B1PE4|tsarkov_klim|**8/8**|**402**|
+|3823B1PE4|safronov_maksim|**8/8**|**377**|
+|3823B1PE4|sinev_timur|**8/8**|**343**|
+|3823B1PE4|terekhov_dmitriy|**8/8**|**399**|
+|3823B1PE4|trofimov_nikita|6/8|258|
+|3823B1PE4|tsarkov_klim|**8/8**|**401**|
 |3823B1PE4|urin_oleg|5/8|248|
-|3823B1PE4|vdovin_artem|1/8|44|
-|3823B1PE4|zaharov_gleb|6/8|326|
+|3823B1PE4|vdovin_artem|2/8|89|
+|3823B1PE4|zaharov_gleb|6/8|325|
 
 Passed: 11
 
