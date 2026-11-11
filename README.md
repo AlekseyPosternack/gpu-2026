@@ -871,6 +871,7 @@ std::vector<float> GeluOCL(const std::vector<float>& input, int platform) {
 |3823B1PE3|rastvorov_kirill|0.2091|5|
 |3823B1PE4|karpich_ivan|0.2102|5|
 |3823B1PE4|peryashkin_vasily|0.2377|3|
+|3823B1PE1|tabalaev_anton|0.2381|14|
 |3823B1PE3|dergachev_arseniy|0.2382|1|
 |3823B1FI3|lifanov_kirill|0.2386|1|
 |3823B1PE1|rusakova_aleksandra|0.2386|2|
@@ -939,26 +940,26 @@ Passed: 1
 ## 3823B1PE1
 |Group|Name|Passed|Score|
 |-----|----|------|-----|
-|3823B1PE1|chernov_timur|**8/8**|**336**|
-|3823B1PE1|golovanov_daniil|**8/8**|**382**|
-|3823B1PE1|ivanova_polina|**8/8**|**399**|
-|3823B1PE1|kondrashova_victoria|**8/8**|**369**|
-|3823B1PE1|lazareva_ann|**8/8**|**361**|
+|3823B1PE1|chernov_timur|**8/8**|**335**|
+|3823B1PE1|golovanov_daniil|**8/8**|**381**|
+|3823B1PE1|ivanova_polina|**8/8**|**398**|
+|3823B1PE1|kondrashova_victoria|**8/8**|**368**|
+|3823B1PE1|lazareva_ann|**8/8**|**360**|
 |3823B1PE1|makoveeva_sofia|1/8|51|
 |3823B1PE1|melnik_ivan|6/8|299|
 |3823B1PE1|morozov_nikita|1/8|49|
-|3823B1PE1|otcheskov_semyon|**8/8**|**461**|
-|3823B1PE1|perepelkin_iaroslav|**8/8**|**459**|
-|3823B1PE1|popova_elizaveta|**8/8**|**333**|
-|3823B1PE1|redkina_alina|**8/8**|**466**|
-|3823B1PE1|rusakova_aleksandra|**8/8**|**461**|
-|3823B1PE1|shilin_nikita|**8/8**|**440**|
-|3823B1PE1|tabalaev_anton|7/8|343|
-|3823B1PE1|tsibareva_ekaterina|**8/8**|**374**|
-|3823B1PE1|zhurin_ivan|**8/8**|**368**|
+|3823B1PE1|otcheskov_semyon|**8/8**|**460**|
+|3823B1PE1|perepelkin_iaroslav|**8/8**|**458**|
+|3823B1PE1|popova_elizaveta|**8/8**|**332**|
+|3823B1PE1|redkina_alina|**8/8**|**465**|
+|3823B1PE1|rusakova_aleksandra|**8/8**|**460**|
+|3823B1PE1|shilin_nikita|**8/8**|**439**|
+|3823B1PE1|tabalaev_anton|**8/8**|**394**|
+|3823B1PE1|tsibareva_ekaterina|**8/8**|**373**|
+|3823B1PE1|zhurin_ivan|**8/8**|**367**|
 |3823B1PE1|zyazeva_svetlana|2/8|69|
 
-Passed: 13
+Passed: 14
 
 ## 3823B1PE2
 |Group|Name|Passed|Score|
@@ -1015,7 +1016,7 @@ Passed: 7
 
 Passed: 11
 
-**Total Passed: 44**
+**Total Passed: 45**
 
 ---
 *Maximum Score: 512 (64 per task)*
