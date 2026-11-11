@@ -39,7 +39,7 @@ __global__ void GeluKernel(const float* input, float* output, std::size_t count)
     const std::size_t i = static_cast<std::size_t>(blockIdx.x) * blockDim.x + threadIdx.x;
     if (i < count) {
         const float x = input[i];
-        const float argument = 0.6366197723675814f * (x + 0.044715f * x * x * x);
+        const float argument = 0.7978845608028654f * (x + 0.044715f * x * x * x);
         output[i] = x / (1.0f + expf(-2.0f * argument));
     }
 }
