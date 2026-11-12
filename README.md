@@ -901,6 +901,7 @@ std::vector<float> GeluOCL(const std::vector<float>& input, int platform) {
 |3823B1PE2|vasiliev_mikhail|0.2410|4|
 |3823B1PE4|remizov_kirill|0.2412|12|
 |3823B1PE1|zhurin_ivan|0.2416|11|
+|3823B1PE1|melnik_ivan|0.2435|15|
 |3823B1PE1|otcheskov_semyon|0.2442|3|
 |3823B1PE4|imanov_sabutay|0.2448|8|
 |3823B1PE2|olesnitskiy_vladimir|0.2454|8|
@@ -932,7 +933,6 @@ std::vector<float> GeluOCL(const std::vector<float>& input, int platform) {
 |3823B1PE2|sinev_artem|TEST FAILED|-|
 |3823B1PE2|posternak_alexey|TEST FAILED|-|
 |3823B1PE4|trofimov_nikita|TEST FAILED|-|
-|3823B1PE1|melnik_ivan|BUILD FAILED|-|
 
 # Tasks Done
 ## 3823B1FI1
@@ -966,26 +966,26 @@ Passed: 1
 ## 3823B1PE1
 |Group|Name|Passed|Score|
 |-----|----|------|-----|
-|3823B1PE1|chernov_timur|**8/8**|**335**|
-|3823B1PE1|golovanov_daniil|**8/8**|**380**|
-|3823B1PE1|ivanova_polina|**8/8**|**398**|
-|3823B1PE1|kondrashova_victoria|**8/8**|**367**|
-|3823B1PE1|lazareva_ann|**8/8**|**359**|
+|3823B1PE1|chernov_timur|**8/8**|**334**|
+|3823B1PE1|golovanov_daniil|**8/8**|**379**|
+|3823B1PE1|ivanova_polina|**8/8**|**397**|
+|3823B1PE1|kondrashova_victoria|**8/8**|**366**|
+|3823B1PE1|lazareva_ann|**8/8**|**358**|
 |3823B1PE1|makoveeva_sofia|1/8|51|
-|3823B1PE1|melnik_ivan|7/8|340|
+|3823B1PE1|melnik_ivan|**8/8**|**387**|
 |3823B1PE1|morozov_nikita|1/8|49|
-|3823B1PE1|otcheskov_semyon|**8/8**|**460**|
-|3823B1PE1|perepelkin_iaroslav|**8/8**|**458**|
-|3823B1PE1|popova_elizaveta|**8/8**|**332**|
-|3823B1PE1|redkina_alina|**8/8**|**465**|
+|3823B1PE1|otcheskov_semyon|**8/8**|**459**|
+|3823B1PE1|perepelkin_iaroslav|**8/8**|**457**|
+|3823B1PE1|popova_elizaveta|**8/8**|**331**|
+|3823B1PE1|redkina_alina|**8/8**|**464**|
 |3823B1PE1|rusakova_aleksandra|**8/8**|**460**|
-|3823B1PE1|shilin_nikita|**8/8**|**439**|
+|3823B1PE1|shilin_nikita|**8/8**|**438**|
 |3823B1PE1|tabalaev_anton|**8/8**|**394**|
-|3823B1PE1|tsibareva_ekaterina|**8/8**|**372**|
+|3823B1PE1|tsibareva_ekaterina|**8/8**|**371**|
 |3823B1PE1|zhurin_ivan|**8/8**|**366**|
 |3823B1PE1|zyazeva_svetlana|2/8|69|
 
-Passed: 14
+Passed: 15
 
 ## 3823B1PE2
 |Group|Name|Passed|Score|
@@ -1044,7 +1044,7 @@ Passed: 7
 
 Passed: 12
 
-**Total Passed: 47**
+**Total Passed: 48**
 
 ---
 *Maximum Score: 512 (64 per task)*
