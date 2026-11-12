@@ -1,9 +1,7 @@
-#include "gelu_ocl.h"
-
-#ifndef CL_TARGET_OPENCL_VERSION
 #define CL_TARGET_OPENCL_VERSION 120
-#endif
 #define CL_USE_DEPRECATED_OPENCL_1_2_APIS
+
+#include "gelu_ocl.h"
 
 #include <CL/cl.h>
 #include <cstddef>
@@ -11,7 +9,7 @@
 
 namespace {
 
-const char* const kGeluOpenCLSource = R"CLC(
+const char* kGeluOpenCLSource = R"CLC(
 __kernel void gelu_inplace_vec2(__global float* buf, const ulong total) {
     const size_t idx = get_global_id(0) * 2;
     if (idx + 1 < total) {
@@ -69,12 +67,11 @@ std::vector<float> GeluOCL(const std::vector<float>& input, int platform) {
         clGetDeviceIDs(platforms[platform], CL_DEVICE_TYPE_GPU, num_devices, devices.data(), nullptr);
         const cl_device_id target_device = devices[0];
 
-        cl_int err = CL_SUCCESS;
-        ocl_ctx = clCreateContext(nullptr, 1, &target_device, nullptr, nullptr, &err);
-        ocl_queue = clCreateCommandQueue(ocl_ctx, target_device, 0, &err);
-        ocl_prog = clCreateProgramWithSource(ocl_ctx, 1, &kGeluOpenCLSource, nullptr, &err);
+        ocl_ctx = clCreateContext(nullptr, 1, &target_device, nullptr, nullptr, nullptr);
+        ocl_queue = clCreateCommandQueue(ocl_ctx, target_device, 0, nullptr);
+        ocl_prog = clCreateProgramWithSource(ocl_ctx, 1, &kGeluOpenCLSource, nullptr, nullptr);
         clBuildProgram(ocl_prog, 1, &target_device, "-cl-std=CL1.2", nullptr, nullptr);
-        ocl_kern = clCreateKernel(ocl_prog, "gelu_inplace_vec2", &err);
+        ocl_kern = clCreateKernel(ocl_prog, "gelu_inplace_vec2", nullptr);
 
         initialized_platform = platform;
     }
@@ -84,8 +81,7 @@ std::vector<float> GeluOCL(const std::vector<float>& input, int platform) {
         if (dev_buf != nullptr) {
             clReleaseMemObject(dev_buf);
         }
-        cl_int err = CL_SUCCESS;
-        dev_buf = clCreateBuffer(ocl_ctx, CL_MEM_READ_WRITE, bytes, nullptr, &err);
+        dev_buf = clCreateBuffer(ocl_ctx, CL_MEM_READ_WRITE, bytes, nullptr, nullptr);
         allocated_bytes = bytes;
     }
 
@@ -95,11 +91,11 @@ std::vector<float> GeluOCL(const std::vector<float>& input, int platform) {
     clSetKernelArg(ocl_kern, 0, sizeof(cl_mem), &dev_buf);
     clSetKernelArg(ocl_kern, 1, sizeof(cl_ulong), &total_elems);
 
-    constexpr std::size_t kLocalSize = 256;
+    const std::size_t local_size = 256;
     const std::size_t work_items = (n + 1) / 2;
-    const std::size_t global_size = ((work_items + kLocalSize - 1) / kLocalSize) * kLocalSize;
+    const std::size_t global_size = ((work_items + local_size - 1) / local_size) * local_size;
 
-    clEnqueueNDRangeKernel(ocl_queue, ocl_kern, 1, nullptr, &global_size, &kLocalSize, 0, nullptr, nullptr);
+    clEnqueueNDRangeKernel(ocl_queue, ocl_kern, 1, nullptr, &global_size, &local_size, 0, nullptr, nullptr);
 
     clFlush(ocl_queue);
 
