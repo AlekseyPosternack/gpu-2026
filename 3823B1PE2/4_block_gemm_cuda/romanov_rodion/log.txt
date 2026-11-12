@@ -1,1 +1,0 @@
-Incorrect results, test input_128_1.bin, difference 1.0
