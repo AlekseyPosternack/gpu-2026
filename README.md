@@ -741,8 +741,8 @@ std::vector<float> GeluOCL(const std::vector<float>& input, int platform) {
 |3823B1PE1|zhurin_ivan|0.0430|13|
 |3823B1PE2|zorin_danila_artemovich|0.0498|2|
 |3823B1PE3|balchunayte_zlata|0.0501|7|
-|3823B1PE1|shilin_nikita|0.0503|6|
 |3823B1PE2|romanov_rodion|0.0503|12|
+|3823B1PE1|shilin_nikita|0.0503|6|
 |3823B1PE2|kotelnikova_anastasia|0.0505|3|
 |3823B1PE1|popova_elizaveta|0.0506|14|
 |3823B1PE1|golovanov_daniil|0.0506|5|
@@ -919,6 +919,7 @@ std::vector<float> GeluOCL(const std::vector<float>& input, int platform) {
 |3823B1PE3|batkov_filipp|0.2548|7|
 |3823B1PE3|bortsova_angelina|0.2561|2|
 |3823B1PE1|shilin_nikita|0.2573|9|
+|3823B1FI2|rozenberg_alexey|0.2637|1|
 |3823B1PE4|terekhov_dmitriy|0.2737|4|
 |3823B1PE4|tsarkov_klim|0.2764|2|
 |3823B1PE4|baranov_andrey|0.2979|9|
@@ -948,11 +949,11 @@ Passed: 3
 |-----|----|------|-----|
 |3823B1FI2|ashihmin_daniil|5/8|301|
 |3823B1FI2|chyokotov_alexey|4/8|241|
-|3823B1FI2|rozenberg_alexey|7/8|433|
+|3823B1FI2|rozenberg_alexey|**8/8**|**497**|
 |3823B1FI2|sannikov_ivan|5/8|301|
 |3823B1FI2|volkov_aleksei|3/8|182|
 
-Passed: 0
+Passed: 1
 
 ## 3823B1FI3
 |Group|Name|Passed|Score|
@@ -1042,7 +1043,7 @@ Passed: 7
 
 Passed: 12
 
-**Total Passed: 46**
+**Total Passed: 47**
 
 ---
 *Maximum Score: 512 (64 per task)*
