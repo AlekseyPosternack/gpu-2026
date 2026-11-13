@@ -120,10 +120,12 @@ std::vector<float> GeluOCL(const std::vector<float>& input, int platform) {
     if (!state)
         state = std::make_unique<OpenCLState>(platform);
 
+    const size_t n4 = (input.size() + 3) / 4;
     const size_t bytes = input.size() * sizeof(float);
-    const int n = static_cast<int>(input.size());
+    const size_t padded_bytes = n4 * 4 * sizeof(float);
+    const int n4i = static_cast<int>(n4);
 
-    state->Reserve(bytes);
+    state->Reserve(padded_bytes);
 
     clEnqueueWriteBuffer(
         state->queue,
@@ -139,10 +141,10 @@ std::vector<float> GeluOCL(const std::vector<float>& input, int platform) {
 
     clSetKernelArg(state->kernel, 0, sizeof(cl_mem), &state->input_buffer);
     clSetKernelArg(state->kernel, 1, sizeof(cl_mem), &state->output_buffer);
-    clSetKernelArg(state->kernel, 2, sizeof(int), &n);
+    clSetKernelArg(state->kernel, 2, sizeof(int), &n4i);
 
     const size_t local_size = 256;
-    const size_t work_items = (input.size() + 3) / 4;
+    const size_t work_items = n4;
     const size_t global_size = ((work_items + local_size - 1) / local_size) * local_size;
 
     clEnqueueNDRangeKernel(

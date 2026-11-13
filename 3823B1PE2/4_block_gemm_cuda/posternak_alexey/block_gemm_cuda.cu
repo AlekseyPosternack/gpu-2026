@@ -9,8 +9,8 @@ __global__ void block_gemm_kernel(const float* __restrict__ a,
                                    const float* __restrict__ b,
                                    float* __restrict__ c,
                                    int n) {
-    __shared__ float As[BLOCK_SIZE][BLOCK_SIZE];
-    __shared__ float Bs[BLOCK_SIZE][BLOCK_SIZE];
+    __shared__ float As[BLOCK_SIZE * TILE_SIZE][BLOCK_SIZE + 1];
+    __shared__ float Bs[BLOCK_SIZE][BLOCK_SIZE * TILE_SIZE + 1];
     
     // координаты блока в сетке
     int block_row = blockIdx.y;
@@ -37,7 +37,7 @@ __global__ void block_gemm_kernel(const float* __restrict__ a,
     
     for (int t = 0; t < num_tiles; ++t) {
         // определяем координаты
-        int tile_row = block_row * BLOCK_SIZE + ty;
+        int tile_row = t * BLOCK_SIZE + ty;
         int tile_col = t * BLOCK_SIZE + tx;
         
         // загрузка блока A в sm
