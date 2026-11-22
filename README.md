@@ -893,6 +893,7 @@ std::vector<float> GeluOCL(const std::vector<float>& input, int platform) {
 |Group|Name|Result|Rank|
 |-----|----|------|----|
 |3823B1PE1|otcheskov_semyon|0.0460|3|
+|**FAST**|**FAST**|**0.0930**|**-**|
 |3823B1PE2|kolotukhin_alexander|0.1000|10|
 |3823B1PE2|vasiliev_mikhail|0.1370|5|
 |3823B1PE4|peryashkin_vasily|0.1370|3|
