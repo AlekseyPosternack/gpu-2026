@@ -5,4 +5,4 @@
 
 std::vector<float> GeluOCL(const std::vector<float>& input, int platform);
 
-#endif
+#endif // __GELU_OCL_H
