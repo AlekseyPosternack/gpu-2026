@@ -16,13 +16,15 @@ __kernel void gelu_kernel(
     if (i >= n4)
         return;
 
-    const float K1 = -1.5957691216057308f;
-    const float K2 = -0.0713548262452757f;
+    const float4 K1 = (float4)(-1.5957691216057308f);
+    const float4 K2 = (float4)(-0.07135481627260025f);
 
     float4 x = input[i];
     float4 z = x * fma(K2, x * x, K1);
     z = fmin(z, (float4)(80.0f));
-    output[i] = native_divide(x, (float4)(1.0f) + native_exp(z));
+
+    float4 r = native_divide(x, (float4)(1.0f) + native_exp(z));
+    output[i] = select(r, (float4)(0.0f), z >= (float4)(80.0f));
 }
 )CLC";
 
@@ -138,6 +140,11 @@ std::vector<float> GeluOCL(const std::vector<float>& input, int platform) {
         nullptr,
         nullptr
     );
+    if (padded_bytes != bytes) {
+        static const float zeros[3] = {0.f, 0.f, 0.f};
+        clEnqueueWriteBuffer(state->queue, state->input_buffer, CL_FALSE,
+                             bytes, padded_bytes - bytes, zeros, 0, nullptr, nullptr);
+    }
 
     clSetKernelArg(state->kernel, 0, sizeof(cl_mem), &state->input_buffer);
     clSetKernelArg(state->kernel, 1, sizeof(cl_mem), &state->output_buffer);
